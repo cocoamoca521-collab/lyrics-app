@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>歌詞カード管理</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg: #0f0f0f;
+  --surface: #1a1a2e;
+  --surface2: #16213e;
+  --accent: #e94560;
+  --accent2: #533483;
+  --text: #eee;
+  --text-dim: #999;
+  --border: #333;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans JP', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100dvh;
+}
+
+header {
+  background: linear-gradient(135deg, var(--surface), var(--accent2));
+  padding: 16px 20px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 2px 12px rgba(0,0,0,.5);
+}
+
+header h1 {
+  font-size: 1.2rem;
+  margin-bottom: 10px;
+}
+
+.search-bar {
+  display: flex;
+  gap: 8px;
+}
+
+.search-bar input {
+  flex: 1;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 1rem;
+}
+
+.search-bar input::placeholder { color: var(--text-dim); }
+
+.btn {
+  padding: 10px 18px;
+  border-radius: 8px;
+  border: none;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform .1s, opacity .2s;
+  white-space: nowrap;
+}
+
+.btn:active { transform: scale(.95); }
+
+.btn-primary {
+  background: var(--accent);
+  color: #fff;
+}
+
+.btn-secondary {
+  background: var(--surface2);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.btn-danger {
+  background: #c0392b;
+  color: #fff;
+}
+
+.btn-sm {
+  padding: 6px 12px;
+  font-size: .85rem;
+}
+
+main {
+  padding: 16px;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.card-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.card {
+  background: var(--surface);
+  border-radius: 12px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: border-color .2s;
+}
+
+.card:hover { border-color: var(--accent); }
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 8px;
+}
+
+.card-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.card-character {
+  font-size: .85rem;
+  color: var(--accent2);
+  background: rgba(83,52,131,.2);
+  padding: 2px 10px;
+  border-radius: 20px;
+  border: 1px solid var(--accent2);
+  white-space: nowrap;
+}
+
+.card-lyrics {
+  font-size: .9rem;
+  color: var(--text-dim);
+  white-space: pre-wrap;
+  max-height: 4.5em;
+  overflow: hidden;
+  line-height: 1.5;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text-dim);
+}
+
+.empty-state p { margin-top: 8px; }
+
+/* Modal */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.7);
+  z-index: 200;
+  justify-content: center;
+  align-items: flex-end;
+}
+
+.modal-overlay.active {
+  display: flex;
+}
+
+.modal {
+  background: var(--surface);
+  width: 100%;
+  max-width: 800px;
+  max-height: 90dvh;
+  border-radius: 16px 16px 0 0;
+  padding: 20px;
+  overflow-y: auto;
+  animation: slideUp .25s ease-out;
+}
+
+@media (min-width: 600px) {
+  .modal-overlay.active {
+    align-items: center;
+  }
+  .modal {
+    border-radius: 16px;
+    max-height: 80dvh;
+    margin: 20px;
+  }
+}
+
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+.modal h2 {
+  margin-bottom: 16px;
+  font-size: 1.1rem;
+}
+
+.form-group {
+  margin-bottom: 14px;
+}
+
+.form-group label {
+  display: block;
+  font-size: .85rem;
+  color: var(--text-dim);
+  margin-bottom: 4px;
+}
+
+.form-group input,
+.form-group textarea {
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 1rem;
+  font-family: inherit;
+}
+
+.form-group textarea {
+  min-height: 200px;
+  resize: vertical;
+  line-height: 1.6;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.modal-actions .btn { flex: 1; }
+
+.modal-actions-right {
+  display: flex;
+  gap: 8px;
+}
+
+/* Detail view */
+.detail-lyrics {
+  white-space: pre-wrap;
+  line-height: 1.8;
+  font-size: 1rem;
+  padding: 12px 0;
+}
+
+.detail-meta {
+  font-size: .8rem;
+  color: var(--text-dim);
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+/* FAB */
+.fab {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  font-size: 2rem;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(233,69,96,.4);
+  transition: transform .15s;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.fab:active { transform: scale(.9); }
+
+.count-badge {
+  font-size: .85rem;
+  color: var(--text-dim);
+  margin-bottom: 12px;
+}
+
+.highlight {
+  background: rgba(233,69,96,.3);
+  border-radius: 2px;
+}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🎵 歌詞カード管理</h1>
+  <div class="search-bar">
+    <input type="text" id="searchInput" placeholder="タイトル・歌詞で検索...">
+  </div>
+</header>
+
+<main>
+  <div class="count-badge" id="countBadge"></div>
+  <div class="card-list" id="cardList"></div>
+  <div class="empty-state" id="emptyState" style="display:none;">
+    <div style="font-size:2rem;">📝</div>
+    <p>歌詞カードがまだないよ！<br>右下の＋ボタンから追加しよう</p>
+  </div>
+</main>
+
+<button class="fab" id="fabAdd" title="新規追加">＋</button>
+
+<!-- 編集モーダル -->
+<div class="modal-overlay" id="editModal">
+  <div class="modal">
+    <h2 id="modalTitle">新規追加</h2>
+    <div class="form-group">
+      <label>キャラ名</label>
+      <input type="text" id="inputCharacter" placeholder="キャラ名を入力">
+    </div>
+    <div class="form-group">
+      <label>タイトル</label>
+      <input type="text" id="inputTitle" placeholder="曲のタイトルを入力">
+    </div>
+    <div class="form-group">
+      <label>歌詞</label>
+      <textarea id="inputLyrics" placeholder="歌詞を入力..."></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" id="btnCancel">キャンセル</button>
+      <button class="btn btn-primary" id="btnSave">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 詳細モーダル -->
+<div class="modal-overlay" id="detailModal">
+  <div class="modal">
+    <div class="card-header">
+      <div>
+        <div class="card-title" id="detailTitle"></div>
+        <div class="card-character" id="detailCharacter" style="display:inline-block; margin-top:6px;"></div>
+      </div>
+    </div>
+    <div class="detail-lyrics" id="detailLyrics"></div>
+    <div class="detail-meta" id="detailMeta"></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" id="btnDetailClose">閉じる</button>
+      <div class="modal-actions-right">
+        <button class="btn btn-danger btn-sm" id="btnDelete">削除</button>
+        <button class="btn btn-primary btn-sm" id="btnEdit">編集</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://dbpferzntxfaxkucusne.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_JUvwqzfkKsDR7Xwm3jJ6ug_TcVaeMwR';
+
+const headers = {
+  'apikey': SUPABASE_KEY,
+  'Authorization': `Bearer ${SUPABASE_KEY}`,
+  'Content-Type': 'application/json',
+  'Prefer': 'return=representation'
+};
+
+const API = `${SUPABASE_URL}/rest/v1/lyrics`;
+
+let allCards = [];
+let editingId = null;
+
+// DOM
+const searchInput = document.getElementById('searchInput');
+const cardList = document.getElementById('cardList');
+const countBadge = document.getElementById('countBadge');
+const emptyState = document.getElementById('emptyState');
+const fabAdd = document.getElementById('fabAdd');
+const editModal = document.getElementById('editModal');
+const detailModal = document.getElementById('detailModal');
+const modalTitle = document.getElementById('modalTitle');
+const inputCharacter = document.getElementById('inputCharacter');
+const inputTitle = document.getElementById('inputTitle');
+const inputLyrics = document.getElementById('inputLyrics');
+const btnCancel = document.getElementById('btnCancel');
+const btnSave = document.getElementById('btnSave');
+const btnDetailClose = document.getElementById('btnDetailClose');
+const btnDelete = document.getElementById('btnDelete');
+const btnEdit = document.getElementById('btnEdit');
+const detailTitle = document.getElementById('detailTitle');
+const detailCharacter = document.getElementById('detailCharacter');
+const detailLyrics = document.getElementById('detailLyrics');
+const detailMeta = document.getElementById('detailMeta');
+
+let currentDetailId = null;
+
+async function fetchCards() {
+  const res = await fetch(`${API}?order=updated_at.desc`, { headers });
+  if (!res.ok) throw new Error('fetch failed');
+  allCards = await res.json();
+  renderCards();
+}
+
+function escapeHtml(str) {
+  const d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}
+
+function highlightText(text, query) {
+  if (!query) return escapeHtml(text);
+  const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const re = new RegExp(`(${escaped})`, 'gi');
+  return escapeHtml(text).replace(re, '<span class="highlight">$1</span>');
+}
+
+function renderCards() {
+  const query = searchInput.value.trim().toLowerCase();
+  let filtered = allCards;
+  if (query) {
+    filtered = allCards.filter(c =>
+      c.title.toLowerCase().includes(query) ||
+      c.lyrics.toLowerCase().includes(query) ||
+      c.character_name.toLowerCase().includes(query)
+    );
+  }
+
+  if (filtered.length === 0) {
+    cardList.innerHTML = '';
+    emptyState.style.display = 'block';
+    countBadge.textContent = query ? `検索結果: 0件` : '';
+  } else {
+    emptyState.style.display = 'none';
+    countBadge.textContent = query
+      ? `検索結果: ${filtered.length}件`
+      : `全${filtered.length}曲`;
+    cardList.innerHTML = filtered.map(c => `
+      <div class="card" data-id="${c.id}">
+        <div class="card-header">
+          <div class="card-title">${highlightText(c.title || '無題', query)}</div>
+          ${c.character_name ? `<div class="card-character">${escapeHtml(c.character_name)}</div>` : ''}
+        </div>
+        <div class="card-lyrics">${highlightText(c.lyrics, query)}</div>
+      </div>
+    `).join('');
+  }
+}
+
+function openEditModal(card) {
+  editingId = card ? card.id : null;
+  modalTitle.textContent = card ? '編集' : '新規追加';
+  inputCharacter.value = card ? card.character_name : '';
+  inputTitle.value = card ? card.title : '';
+  inputLyrics.value = card ? card.lyrics : '';
+  editModal.classList.add('active');
+  inputTitle.focus();
+}
+
+function closeEditModal() {
+  editModal.classList.remove('active');
+  editingId = null;
+}
+
+function openDetailModal(card) {
+  currentDetailId = card.id;
+  detailTitle.textContent = card.title || '無題';
+  detailCharacter.textContent = card.character_name;
+  detailCharacter.style.display = card.character_name ? 'inline-block' : 'none';
+  detailLyrics.textContent = card.lyrics;
+  const d = new Date(card.updated_at);
+  detailMeta.textContent = `最終更新: ${d.toLocaleDateString('ja-JP')} ${d.toLocaleTimeString('ja-JP', {hour:'2-digit', minute:'2-digit'})}`;
+  detailModal.classList.add('active');
+}
+
+function closeDetailModal() {
+  detailModal.classList.remove('active');
+  currentDetailId = null;
+}
+
+async function saveCard() {
+  const data = {
+    character_name: inputCharacter.value.trim(),
+    title: inputTitle.value.trim(),
+    lyrics: inputLyrics.value,
+    updated_at: new Date().toISOString()
+  };
+
+  btnSave.disabled = true;
+  btnSave.textContent = '保存中...';
+
+  try {
+    if (editingId) {
+      await fetch(`${API}?id=eq.${editingId}`, {
+        method: 'PATCH', headers, body: JSON.stringify(data)
+      });
+    } else {
+      await fetch(API, {
+        method: 'POST', headers, body: JSON.stringify(data)
+      });
+    }
+    closeEditModal();
+    await fetchCards();
+  } catch (e) {
+    alert('保存に失敗しました: ' + e.message);
+  } finally {
+    btnSave.disabled = false;
+    btnSave.textContent = '保存';
+  }
+}
+
+async function deleteCard(id) {
+  if (!confirm('この歌詞カードを削除しますか？')) return;
+  await fetch(`${API}?id=eq.${id}`, { method: 'DELETE', headers });
+  closeDetailModal();
+  await fetchCards();
+}
+
+// Events
+fabAdd.addEventListener('click', () => openEditModal(null));
+btnCancel.addEventListener('click', closeEditModal);
+btnSave.addEventListener('click', saveCard);
+btnDetailClose.addEventListener('click', closeDetailModal);
+btnDelete.addEventListener('click', () => deleteCard(currentDetailId));
+btnEdit.addEventListener('click', () => {
+  const card = allCards.find(c => c.id === currentDetailId);
+  closeDetailModal();
+  if (card) openEditModal(card);
+});
+
+cardList.addEventListener('click', (e) => {
+  const el = e.target.closest('.card');
+  if (!el) return;
+  const card = allCards.find(c => c.id === el.dataset.id);
+  if (card) openDetailModal(card);
+});
+
+editModal.addEventListener('click', (e) => {
+  if (e.target === editModal) closeEditModal();
+});
+
+detailModal.addEventListener('click', (e) => {
+  if (e.target === detailModal) closeDetailModal();
+});
+
+let searchTimer;
+searchInput.addEventListener('input', () => {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(renderCards, 200);
+});
+
+fetchCards();
+</script>
+</body>
+</html>
