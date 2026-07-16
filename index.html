@@ -4,40 +4,162 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>歌詞カード管理</title>
+<script>
+(function () {
+  var w = localStorage.getItem('lyricsAppWorld') || 'minato';
+  document.documentElement.setAttribute('data-world', w);
+  if (w === 'noa') {
+    var h = new Date().getHours();
+    document.documentElement.setAttribute('data-noa-time', (h >= 0 && h < 6) ? 'night' : 'day');
+  }
+})();
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;600&family=M+PLUS+Rounded+1c:wght@400;700&display=swap" rel="stylesheet">
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
-:root {
-  --bg: #0f0f0f;
-  --surface: #1a1a2e;
-  --surface2: #16213e;
-  --accent: #e94560;
-  --accent2: #533483;
-  --text: #eee;
-  --text-dim: #999;
-  --border: #333;
+:root,
+[data-world="minato"] {
+  --bg: #eef7f6;
+  --surface: rgba(255,255,255,.55);
+  --surface2: rgba(255,255,255,.75);
+  --header-bg: linear-gradient(135deg, rgba(255,255,255,.6), rgba(170,224,224,.35));
+  --header-blur: blur(14px);
+  --accent: #2fb6c4;
+  --accent2: #1e6b73;
+  --on-accent: #ffffff;
+  --text: #17383b;
+  --text-dim: #5c7a7d;
+  --border: rgba(23,56,59,.15);
+  --radius-card: 14px;
+  --radius-btn: 10px;
+  --font-main: 'Shippori Mincho', serif;
+  --shadow-card: 0 4px 20px rgba(47,182,196,.15);
+  --fade: 0s;
 }
 
+[data-world="noa"] {
+  --bg: #fff6ea;
+  --surface: #ffffff;
+  --surface2: #fff2df;
+  --header-bg: linear-gradient(135deg, #ffe3ec, #fff6ea);
+  --header-blur: none;
+  --accent: #ff8fab;
+  --accent2: #e6608a;
+  --on-accent: #ffffff;
+  --text: #4a3b32;
+  --text-dim: #9c8b7e;
+  --border: #f0ddc9;
+  --radius-card: 20px;
+  --radius-btn: 18px;
+  --font-main: 'M PLUS Rounded 1c', sans-serif;
+  --shadow-card: 0 4px 16px rgba(255,143,171,.25);
+}
+
+[data-world="noa"][data-noa-time="night"] {
+  --bg: #14180f;
+  --surface: #1c2216;
+  --surface2: #202a18;
+  --header-bg: linear-gradient(135deg, #1c2216, #14180f);
+  --accent: #c9a227;
+  --accent2: #a9861d;
+  --on-accent: #1c1a0d;
+  --text: #e8e4d8;
+  --text-dim: #9a9788;
+  --border: #2c3324;
+  --shadow-card: 0 4px 16px rgba(201,162,39,.2);
+}
+
+html.fading-to-night { --fade: 4s; }
+
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans JP', sans-serif;
+  font-family: var(--font-main), -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans JP', sans-serif;
   background: var(--bg);
   color: var(--text);
   min-height: 100dvh;
+  transition: background-color var(--fade) ease, color var(--fade) ease;
 }
 
 header {
-  background: linear-gradient(135deg, var(--surface), var(--accent2));
+  background: var(--header-bg);
+  backdrop-filter: var(--header-blur);
+  -webkit-backdrop-filter: var(--header-blur);
   padding: 16px 20px;
   position: sticky;
   top: 0;
   z-index: 100;
-  box-shadow: 0 2px 12px rgba(0,0,0,.5);
+  box-shadow: 0 2px 12px rgba(0,0,0,.12);
+  border-bottom: 1px solid var(--border);
+  transition: background-color var(--fade) ease, border-color var(--fade) ease;
+}
+
+.header-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  gap: 12px;
 }
 
 header h1 {
   font-size: 1.2rem;
-  margin-bottom: 10px;
 }
+
+.world-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.world-toggle .toggle-label {
+  font-size: .8rem;
+  color: var(--text-dim);
+  transition: color .15s;
+}
+
+.world-toggle .toggle-label.active {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.toggle-track {
+  width: 44px;
+  height: 24px;
+  border-radius: 999px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  position: relative;
+  transition: background-color .15s;
+}
+
+.toggle-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--accent);
+  transition: transform .2s ease;
+}
+
+[data-world="noa"] .toggle-thumb { transform: translateX(20px); }
+
+.water-line {
+  display: none;
+  height: 2px;
+  margin-top: 12px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  box-shadow: 0 0 10px var(--accent);
+}
+
+[data-world="minato"] .water-line { display: block; }
 
 .search-bar {
   display: flex;
@@ -47,9 +169,9 @@ header h1 {
 .search-bar input {
   flex: 1;
   padding: 10px 14px;
-  border-radius: 8px;
+  border-radius: var(--radius-btn);
   border: 1px solid var(--border);
-  background: var(--bg);
+  background: var(--surface2);
   color: var(--text);
   font-size: 1rem;
 }
@@ -58,7 +180,7 @@ header h1 {
 
 .btn {
   padding: 10px 18px;
-  border-radius: 8px;
+  border-radius: var(--radius-btn);
   border: none;
   font-size: 1rem;
   font-weight: 600;
@@ -71,7 +193,7 @@ header h1 {
 
 .btn-primary {
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
 }
 
 .btn-secondary {
@@ -104,11 +226,11 @@ main {
 
 .card {
   background: var(--surface);
-  border-radius: 12px;
+  border-radius: var(--radius-card);
   padding: 16px;
   border: 1px solid var(--border);
   cursor: pointer;
-  transition: border-color .2s;
+  transition: border-color .2s, background-color var(--fade) ease;
 }
 
 .card:hover { border-color: var(--accent); }
@@ -129,7 +251,7 @@ main {
 .card-character {
   font-size: .85rem;
   color: var(--accent2);
-  background: rgba(83,52,131,.2);
+  background: var(--surface2);
   padding: 2px 10px;
   border-radius: 20px;
   border: 1px solid var(--accent2);
@@ -158,7 +280,7 @@ main {
   display: none;
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,.7);
+  background: rgba(0,0,0,.5);
   z-index: 200;
   justify-content: center;
   align-items: flex-end;
@@ -177,6 +299,8 @@ main {
   padding: 20px;
   overflow-y: auto;
   animation: slideUp .25s ease-out;
+  backdrop-filter: var(--header-blur);
+  -webkit-backdrop-filter: var(--header-blur);
 }
 
 @media (min-width: 600px) {
@@ -215,9 +339,9 @@ main {
 .form-group textarea {
   width: 100%;
   padding: 10px 14px;
-  border-radius: 8px;
+  border-radius: var(--radius-btn);
   border: 1px solid var(--border);
-  background: var(--bg);
+  background: var(--surface2);
   color: var(--text);
   font-size: 1rem;
   font-family: inherit;
@@ -267,11 +391,11 @@ main {
   height: 56px;
   border-radius: 50%;
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
   border: none;
   font-size: 2rem;
   cursor: pointer;
-  box-shadow: 0 4px 16px rgba(233,69,96,.4);
+  box-shadow: 0 4px 16px rgba(0,0,0,.25);
   transition: transform .15s;
   z-index: 50;
   display: flex;
@@ -282,6 +406,19 @@ main {
 
 .fab:active { transform: scale(.9); }
 
+.fab-import {
+  bottom: 90px;
+  width: 44px;
+  height: 44px;
+  font-size: 1.3rem;
+  background: var(--surface2);
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  display: none;
+}
+
+[data-world="noa"] .fab-import { display: flex; }
+
 .count-badge {
   font-size: .85rem;
   color: var(--text-dim);
@@ -289,18 +426,64 @@ main {
 }
 
 .highlight {
-  background: rgba(233,69,96,.3);
+  background: var(--accent);
+  color: var(--on-accent);
   border-radius: 2px;
+}
+
+/* Import mode */
+.import-counter {
+  font-size: .8rem;
+  color: var(--accent);
+  font-weight: 400;
+}
+
+.import-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: .9rem;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.import-error {
+  font-size: .85rem;
+  color: #c0392b;
+  background: rgba(192,57,43,.1);
+  border: 1px solid rgba(192,57,43,.3);
+  border-radius: var(--radius-btn);
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
 }
 </style>
 </head>
 <body>
 
 <header>
-  <h1>🎵 歌詞カード管理</h1>
+  <div class="header-top">
+    <h1>🎵 歌詞カード管理</h1>
+    <div class="world-toggle" id="worldToggle">
+      <span class="toggle-label" id="labelMinato">湊</span>
+      <span class="toggle-track"><span class="toggle-thumb"></span></span>
+      <span class="toggle-label" id="labelNoa">ノア</span>
+    </div>
+  </div>
   <div class="search-bar">
     <input type="text" id="searchInput" placeholder="タイトル・歌詞で検索...">
   </div>
+  <div class="water-line"></div>
 </header>
 
 <main>
@@ -312,6 +495,7 @@ main {
   </div>
 </main>
 
+<button class="fab fab-import" id="fabImport" title="連続インポート">📥</button>
 <button class="fab" id="fabAdd" title="新規追加">＋</button>
 
 <!-- 編集モーダル -->
@@ -358,6 +542,48 @@ main {
   </div>
 </div>
 
+<!-- 連続インポートモーダル -->
+<div class="modal-overlay" id="importModal">
+  <div class="modal">
+    <h2>連続インポート <span class="import-counter" id="importCounter"></span></h2>
+
+    <div id="importPasteView">
+      <div class="form-group">
+        <label>歌詞を貼り付け</label>
+        <textarea id="importRaw" placeholder="Sunoの歌詞をそのままペースト..."></textarea>
+      </div>
+      <div class="import-options">
+        <label class="checkbox-row"><input type="checkbox" id="chkKeepStructure"> 構造タグを残す（[Verse]など）</label>
+        <label class="checkbox-row"><input type="checkbox" id="chkNormalize" checked> 表記をととのえる</label>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary import-exit-btn" id="btnImportExit">終了</button>
+        <button class="btn btn-primary" id="btnImportFormat">整形する</button>
+      </div>
+    </div>
+
+    <div id="importPreviewView" style="display:none;">
+      <div class="form-group">
+        <label>タイトル</label>
+        <input type="text" id="importPreviewTitle" placeholder="タイトルを入力">
+      </div>
+      <div class="form-group">
+        <label>歌詞</label>
+        <textarea id="importPreviewLyrics"></textarea>
+      </div>
+      <div class="import-error" id="importPreviewError" style="display:none;">
+        <span id="importErrorText"></span>
+        <button class="btn btn-secondary btn-sm" id="btnImportRetry">再試行</button>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary import-exit-btn" id="btnImportExit2">終了</button>
+        <button class="btn btn-secondary" id="btnImportBack">貼り直す</button>
+        <button class="btn btn-primary" id="btnImportRegister">登録して次へ</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
 const SUPABASE_URL = 'https://dbpferzntxfaxkucusne.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_JUvwqzfkKsDR7Xwm3jJ6ug_TcVaeMwR';
@@ -370,6 +596,9 @@ const headers = {
 };
 
 const API = `${SUPABASE_URL}/rest/v1/lyrics`;
+const FORMAT_ENDPOINT = `${SUPABASE_URL}/functions/v1/format-lyrics`;
+
+const WORLD_TAG = { minato: '藤宮湊', noa: 'ノア' };
 
 let allCards = [];
 let editingId = null;
@@ -380,6 +609,7 @@ const cardList = document.getElementById('cardList');
 const countBadge = document.getElementById('countBadge');
 const emptyState = document.getElementById('emptyState');
 const fabAdd = document.getElementById('fabAdd');
+const fabImport = document.getElementById('fabImport');
 const editModal = document.getElementById('editModal');
 const detailModal = document.getElementById('detailModal');
 const modalTitle = document.getElementById('modalTitle');
@@ -396,8 +626,81 @@ const detailCharacter = document.getElementById('detailCharacter');
 const detailLyrics = document.getElementById('detailLyrics');
 const detailMeta = document.getElementById('detailMeta');
 
+const worldToggle = document.getElementById('worldToggle');
+const labelMinato = document.getElementById('labelMinato');
+const labelNoa = document.getElementById('labelNoa');
+
+const importModal = document.getElementById('importModal');
+const importPasteView = document.getElementById('importPasteView');
+const importPreviewView = document.getElementById('importPreviewView');
+const importRaw = document.getElementById('importRaw');
+const chkKeepStructure = document.getElementById('chkKeepStructure');
+const chkNormalize = document.getElementById('chkNormalize');
+const importCounter = document.getElementById('importCounter');
+const importPreviewTitle = document.getElementById('importPreviewTitle');
+const importPreviewLyrics = document.getElementById('importPreviewLyrics');
+const importPreviewError = document.getElementById('importPreviewError');
+const importErrorText = document.getElementById('importErrorText');
+const btnImportFormat = document.getElementById('btnImportFormat');
+const btnImportBack = document.getElementById('btnImportBack');
+const btnImportRegister = document.getElementById('btnImportRegister');
+const btnImportRetry = document.getElementById('btnImportRetry');
+
 let currentDetailId = null;
 
+// ---- 世界（ノア／湊）----
+function getWorld() {
+  return localStorage.getItem('lyricsAppWorld') || 'minato';
+}
+
+function isNightNow() {
+  const h = new Date().getHours();
+  return h >= 0 && h < 6;
+}
+
+function applyNoaTime(instant) {
+  const html = document.documentElement;
+  if (getWorld() !== 'noa') {
+    html.removeAttribute('data-noa-time');
+    return;
+  }
+  const night = isNightNow();
+  const wasNight = html.getAttribute('data-noa-time') === 'night';
+  if (night === wasNight) {
+    if (!html.hasAttribute('data-noa-time')) html.setAttribute('data-noa-time', night ? 'night' : 'day');
+    return;
+  }
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (!instant && night && !reduced) {
+    html.classList.add('fading-to-night');
+    setTimeout(() => html.classList.remove('fading-to-night'), 4500);
+  }
+  html.setAttribute('data-noa-time', night ? 'night' : 'day');
+}
+
+function updateWorldUI() {
+  const w = getWorld();
+  document.documentElement.setAttribute('data-world', w);
+  labelMinato.classList.toggle('active', w === 'minato');
+  labelNoa.classList.toggle('active', w === 'noa');
+}
+
+function setWorld(w) {
+  localStorage.setItem('lyricsAppWorld', w);
+  updateWorldUI();
+  applyNoaTime(true);
+  renderCards();
+}
+
+worldToggle.addEventListener('click', () => {
+  setWorld(getWorld() === 'minato' ? 'noa' : 'minato');
+});
+
+updateWorldUI();
+applyNoaTime(true);
+setInterval(() => applyNoaTime(false), 60000);
+
+// ---- カード表示 ----
 async function fetchCards() {
   const res = await fetch(`${API}?order=updated_at.desc`, { headers });
   if (!res.ok) throw new Error('fetch failed');
@@ -418,11 +721,15 @@ function highlightText(text, query) {
   return escapeHtml(text).replace(re, '<span class="highlight">$1</span>');
 }
 
+function cardMatchesWorld(c) {
+  return !c.tag || c.tag === WORLD_TAG[getWorld()];
+}
+
 function renderCards() {
   const query = searchInput.value.trim().toLowerCase();
-  let filtered = allCards;
+  let filtered = allCards.filter(cardMatchesWorld);
   if (query) {
-    filtered = allCards.filter(c =>
+    filtered = filtered.filter(c =>
       c.title.toLowerCase().includes(query) ||
       c.lyrics.toLowerCase().includes(query) ||
       c.character_name.toLowerCase().includes(query)
@@ -488,6 +795,9 @@ async function saveCard() {
     lyrics: inputLyrics.value,
     updated_at: new Date().toISOString()
   };
+  if (!editingId) {
+    data.tag = WORLD_TAG[getWorld()];
+  }
 
   btnSave.disabled = true;
   btnSave.textContent = '保存中...';
@@ -518,6 +828,132 @@ async function deleteCard(id) {
   closeDetailModal();
   await fetchCards();
 }
+
+// ---- 連続インポート ----
+let importCount = 0;
+let importCache = { raw: '', keepStructureTags: false, normalizeText: true };
+
+function updateImportCounter() {
+  importCounter.textContent = importCount > 0 ? `${importCount}曲目 登録完了` : '';
+}
+
+function showImportPaste() {
+  importPasteView.style.display = '';
+  importPreviewView.style.display = 'none';
+  importPreviewError.style.display = 'none';
+}
+
+function showImportPreview() {
+  importPasteView.style.display = 'none';
+  importPreviewView.style.display = '';
+}
+
+function openImportModal() {
+  importCount = 0;
+  updateImportCounter();
+  importRaw.value = '';
+  showImportPaste();
+  importModal.classList.add('active');
+  importRaw.focus();
+}
+
+function closeImportModal() {
+  importModal.classList.remove('active');
+}
+
+async function requestFormat(raw, opts) {
+  const res = await fetch(FORMAT_ENDPOINT, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({
+      rawText: raw,
+      keepStructureTags: opts.keepStructureTags,
+      normalizeText: opts.normalizeText
+    }),
+    signal: AbortSignal.timeout(20000)
+  });
+  if (!res.ok) throw new Error(`format failed: ${res.status}`);
+  return res.json();
+}
+
+async function runFormat(raw, opts) {
+  btnImportFormat.disabled = true;
+  btnImportFormat.textContent = '整形中...';
+  try {
+    const { title, lyrics } = await requestFormat(raw, opts);
+    importPreviewTitle.value = title || '';
+    importPreviewLyrics.value = lyrics || raw;
+    importPreviewError.style.display = 'none';
+    showImportPreview();
+  } catch (e) {
+    importPreviewTitle.value = '';
+    importPreviewLyrics.value = raw;
+    importErrorText.textContent = '整形に失敗したから手動で入力してね';
+    importPreviewError.style.display = 'flex';
+    showImportPreview();
+  } finally {
+    btnImportFormat.disabled = false;
+    btnImportFormat.textContent = '整形する';
+  }
+}
+
+btnImportFormat.addEventListener('click', () => {
+  const raw = importRaw.value.trim();
+  if (!raw) return;
+  importCache = {
+    raw,
+    keepStructureTags: chkKeepStructure.checked,
+    normalizeText: chkNormalize.checked
+  };
+  runFormat(importCache.raw, importCache);
+});
+
+btnImportRetry.addEventListener('click', () => {
+  if (!importCache.raw) return;
+  runFormat(importCache.raw, importCache);
+});
+
+btnImportBack.addEventListener('click', showImportPaste);
+document.querySelectorAll('.import-exit-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    closeImportModal();
+    fetchCards();
+  });
+});
+
+btnImportRegister.addEventListener('click', async () => {
+  const title = importPreviewTitle.value.trim();
+  const lyrics = importPreviewLyrics.value;
+  if (!title || !lyrics.trim()) {
+    alert('タイトルと歌詞を入力してね');
+    return;
+  }
+  btnImportRegister.disabled = true;
+  try {
+    await fetch(API, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        character_name: 'ノア',
+        tag: 'ノア',
+        title,
+        lyrics,
+        updated_at: new Date().toISOString()
+      })
+    });
+    importCount++;
+    updateImportCounter();
+    importRaw.value = '';
+    showImportPaste();
+    importRaw.focus();
+  } catch (e) {
+    alert('登録に失敗した: ' + e.message);
+  } finally {
+    btnImportRegister.disabled = false;
+  }
+});
+
+fabImport.addEventListener('click', openImportModal);
 
 // Events
 fabAdd.addEventListener('click', () => openEditModal(null));
