@@ -418,10 +418,8 @@ main {
   background: var(--surface2);
   color: var(--accent);
   border: 1px solid var(--accent);
-  display: none;
+  display: flex;
 }
-
-[data-world="noa"] .fab-import { display: flex; }
 
 .count-badge {
   font-size: .85rem;
@@ -440,6 +438,16 @@ main {
   font-size: .8rem;
   color: var(--accent);
   font-weight: 400;
+}
+
+.import-tag-info {
+  font-size: .85rem;
+  color: var(--text-dim);
+  margin-bottom: 14px;
+}
+
+.import-tag-info strong {
+  color: var(--accent);
 }
 
 .import-options {
@@ -567,6 +575,7 @@ main {
     </div>
 
     <div id="importPreviewView" style="display:none;">
+      <div class="import-tag-info">登録先タグ: <strong id="importTagLabel"></strong></div>
       <div class="form-group">
         <label>タイトル</label>
         <input type="text" id="importPreviewTitle" placeholder="タイトルを入力">
@@ -652,6 +661,7 @@ const chkNormalize = document.getElementById('chkNormalize');
 const importCounter = document.getElementById('importCounter');
 const importPreviewTitle = document.getElementById('importPreviewTitle');
 const importPreviewLyrics = document.getElementById('importPreviewLyrics');
+const importTagLabel = document.getElementById('importTagLabel');
 const importPreviewError = document.getElementById('importPreviewError');
 const importErrorText = document.getElementById('importErrorText');
 const btnImportFormat = document.getElementById('btnImportFormat');
@@ -857,6 +867,10 @@ function updateImportCounter() {
   importCounter.textContent = importCount > 0 ? `${importCount}曲目 登録完了` : '';
 }
 
+function updateImportTagLabel() {
+  importTagLabel.textContent = WORLD_TAG[getWorld()];
+}
+
 function showImportPaste() {
   importPasteView.style.display = '';
   importPreviewView.style.display = 'none';
@@ -866,6 +880,7 @@ function showImportPaste() {
 function showImportPreview() {
   importPasteView.style.display = 'none';
   importPreviewView.style.display = '';
+  updateImportTagLabel();
 }
 
 function openImportModal() {
@@ -950,12 +965,13 @@ btnImportRegister.addEventListener('click', async () => {
   }
   btnImportRegister.disabled = true;
   try {
+    const tag = WORLD_TAG[getWorld()];
     await fetch(API, {
       method: 'POST',
       headers,
       body: JSON.stringify({
-        character_name: 'ノア',
-        tag: 'ノア',
+        character_name: tag,
+        tag,
         title,
         lyrics,
         updated_at: new Date().toISOString()
