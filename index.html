@@ -4,6 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>歌詞カード管理</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<meta name="theme-color" id="themeColorMeta" content="#2fb6c4">
 <script>
 (function () {
   var w = localStorage.getItem('lyricsAppWorld') || 'minato';
@@ -629,6 +633,7 @@ const detailMeta = document.getElementById('detailMeta');
 const worldToggle = document.getElementById('worldToggle');
 const labelMinato = document.getElementById('labelMinato');
 const labelNoa = document.getElementById('labelNoa');
+const themeColorMeta = document.getElementById('themeColorMeta');
 
 const importModal = document.getElementById('importModal');
 const importPasteView = document.getElementById('importPasteView');
@@ -676,6 +681,12 @@ function applyNoaTime(instant) {
     setTimeout(() => html.classList.remove('fading-to-night'), 4500);
   }
   html.setAttribute('data-noa-time', night ? 'night' : 'day');
+  updateThemeColor();
+}
+
+function updateThemeColor() {
+  const accent = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim();
+  if (accent) themeColorMeta.setAttribute('content', accent);
 }
 
 function updateWorldUI() {
@@ -683,6 +694,7 @@ function updateWorldUI() {
   document.documentElement.setAttribute('data-world', w);
   labelMinato.classList.toggle('active', w === 'minato');
   labelNoa.classList.toggle('active', w === 'noa');
+  updateThemeColor();
 }
 
 function setWorld(w) {
@@ -989,6 +1001,13 @@ searchInput.addEventListener('input', () => {
 });
 
 fetchCards();
+
+// ---- PWA: Service Worker登録 ----
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js');
+  });
+}
 </script>
 </body>
 </html>
