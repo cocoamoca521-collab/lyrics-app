@@ -109,6 +109,9 @@ header {
 
 header h1 {
   font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .world-toggle {
@@ -414,11 +417,35 @@ main {
   bottom: 90px;
   width: 44px;
   height: 44px;
-  font-size: 1.3rem;
   background: var(--surface2);
   color: var(--accent);
   border: 1px solid var(--accent);
   display: flex;
+}
+
+/* Lucide線画アイコン共通 */
+.icon {
+  display: inline-block;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
+.icon-header {
+  width: 20px;
+  height: 20px;
+  color: var(--accent);
+}
+
+.icon-empty {
+  width: 36px;
+  height: 36px;
+  color: var(--accent);
+  margin-bottom: 4px;
+}
+
+.icon-import {
+  width: 22px;
+  height: 22px;
 }
 
 .count-badge {
@@ -485,7 +512,14 @@ main {
 
 <header>
   <div class="header-top">
-    <h1>🎵 歌詞カード管理</h1>
+    <h1>
+      <svg class="icon icon-header" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M9 18V5l12-2v13" />
+        <circle cx="6" cy="18" r="3" />
+        <circle cx="18" cy="16" r="3" />
+      </svg>
+      歌詞カード管理
+    </h1>
     <div class="world-toggle" id="worldToggle">
       <span class="toggle-label" id="labelMinato">湊</span>
       <span class="toggle-track"><span class="toggle-thumb"></span></span>
@@ -502,12 +536,24 @@ main {
   <div class="count-badge" id="countBadge"></div>
   <div class="card-list" id="cardList"></div>
   <div class="empty-state" id="emptyState" style="display:none;">
-    <div style="font-size:2rem;">📝</div>
+    <svg class="icon icon-empty" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M16 5H3" />
+      <path d="M11 12H3" />
+      <path d="M11 19H3" />
+      <path d="M21 16V5" />
+      <circle cx="18" cy="16" r="3" />
+    </svg>
     <p>歌詞カードがまだないよ！<br>右下の＋ボタンから追加しよう</p>
   </div>
 </main>
 
-<button class="fab fab-import" id="fabImport" title="連続インポート">📥</button>
+<button class="fab fab-import" id="fabImport" title="連続インポート">
+  <svg class="icon icon-import" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 3v12" />
+    <path d="m8 11 4 4 4-4" />
+    <path d="M8 5H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-4" />
+  </svg>
+</button>
 <button class="fab" id="fabAdd" title="新規追加">＋</button>
 
 <!-- 編集モーダル -->
