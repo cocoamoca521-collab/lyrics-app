@@ -599,6 +599,14 @@ const headers = {
   'Prefer': 'return=representation'
 };
 
+// Edge Function用: PostgREST専用の Prefer は含めない
+// （Access-Control-Allow-Headers に無いヘッダーを送るとプリフライトで弾かれる）
+const functionHeaders = {
+  'apikey': SUPABASE_KEY,
+  'Authorization': `Bearer ${SUPABASE_KEY}`,
+  'Content-Type': 'application/json'
+};
+
 const API = `${SUPABASE_URL}/rest/v1/lyrics`;
 const FORMAT_ENDPOINT = `${SUPABASE_URL}/functions/v1/format-lyrics`;
 
@@ -876,7 +884,7 @@ function closeImportModal() {
 async function requestFormat(raw, opts) {
   const res = await fetch(FORMAT_ENDPOINT, {
     method: 'POST',
-    headers,
+    headers: functionHeaders,
     body: JSON.stringify({
       rawText: raw,
       keepStructureTags: opts.keepStructureTags,
