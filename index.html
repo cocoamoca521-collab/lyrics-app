@@ -833,6 +833,12 @@ function renderCards() {
   }
 }
 
+// モーダルはopen/closeのたびに作り直されず表示切替のみなので、
+// スクロール位置が前回開いた時のまま残る。開くたびに先頭へ戻す。
+function resetScroll(...els) {
+  els.forEach(el => { if (el) el.scrollTop = 0; });
+}
+
 function openEditModal(card) {
   editingId = card ? card.id : null;
   modalTitle.textContent = card ? '編集' : '新規追加';
@@ -840,6 +846,7 @@ function openEditModal(card) {
   inputTitle.value = card ? card.title : '';
   inputLyrics.value = card ? card.lyrics : '';
   editModal.classList.add('active');
+  resetScroll(editModal.querySelector('.modal'), inputLyrics);
   inputTitle.focus();
 }
 
@@ -857,6 +864,7 @@ function openDetailModal(card) {
   const d = new Date(card.updated_at);
   detailMeta.textContent = `最終更新: ${d.toLocaleDateString('ja-JP')} ${d.toLocaleTimeString('ja-JP', {hour:'2-digit', minute:'2-digit'})}`;
   detailModal.classList.add('active');
+  resetScroll(detailModal.querySelector('.modal'));
 }
 
 function closeDetailModal() {
@@ -921,12 +929,14 @@ function showImportPaste() {
   importPasteView.style.display = '';
   importPreviewView.style.display = 'none';
   importPreviewError.style.display = 'none';
+  resetScroll(importModal.querySelector('.modal'));
 }
 
 function showImportPreview() {
   importPasteView.style.display = 'none';
   importPreviewView.style.display = '';
   updateImportTagLabel();
+  resetScroll(importModal.querySelector('.modal'), importPreviewLyrics);
 }
 
 function openImportModal() {
