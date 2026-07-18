@@ -238,9 +238,45 @@ main {
   border: 1px solid var(--border);
   cursor: pointer;
   transition: border-color .2s, background-color var(--fade) ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .card:hover { border-color: var(--accent); }
+
+.card-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.card-grip {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 44px;
+  margin: -16px 0;
+  color: var(--text-dim);
+  cursor: grab;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.card-grip:active { cursor: grabbing; color: var(--accent); }
+
+.card.dragging {
+  opacity: .85;
+  box-shadow: 0 8px 24px rgba(0,0,0,.3);
+}
+
+.drag-placeholder {
+  border: 2px dashed var(--accent);
+  border-radius: var(--radius-card);
+  box-sizing: border-box;
+}
 
 .card-header {
   display: flex;
@@ -454,6 +490,44 @@ main {
   margin-bottom: 12px;
 }
 
+.sort-toggle {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 10px;
+  overflow-x: auto;
+}
+
+.sort-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--text-dim);
+  font-size: .8rem;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color .15s, color .15s, border-color .15s;
+}
+
+.sort-btn.active {
+  background: var(--accent);
+  color: var(--on-accent);
+  border-color: var(--accent);
+}
+
+.icon-sort {
+  width: 16px;
+  height: 16px;
+}
+
+.icon-grip {
+  width: 18px;
+  height: 18px;
+}
+
 .highlight {
   background: var(--accent);
   color: var(--on-accent);
@@ -533,6 +607,37 @@ main {
 </header>
 
 <main>
+  <div class="sort-toggle" id="sortToggle">
+    <button class="sort-btn" data-mode="new" title="新しい順">
+      <svg class="icon icon-sort" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 6v6l2 1" />
+        <path d="M12.337 21.994a10 10 0 1 1 9.588-8.767" />
+        <path d="m14 18 4 4 4-4" />
+        <path d="M18 14v8" />
+      </svg>
+      <span>新しい順</span>
+    </button>
+    <button class="sort-btn" data-mode="old" title="古い順">
+      <svg class="icon icon-sort" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 6v6l1.56.78" />
+        <path d="M13.227 21.925a10 10 0 1 1 8.767-9.588" />
+        <path d="m14 18 4-4 4 4" />
+        <path d="M18 22v-8" />
+      </svg>
+      <span>古い順</span>
+    </button>
+    <button class="sort-btn" data-mode="manual" title="じぶん順">
+      <svg class="icon icon-sort" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="9" cy="12" r="1" />
+        <circle cx="9" cy="5" r="1" />
+        <circle cx="9" cy="19" r="1" />
+        <circle cx="15" cy="12" r="1" />
+        <circle cx="15" cy="5" r="1" />
+        <circle cx="15" cy="19" r="1" />
+      </svg>
+      <span>じぶん順</span>
+    </button>
+  </div>
   <div class="count-badge" id="countBadge"></div>
   <div class="card-list" id="cardList"></div>
   <div class="empty-state" id="emptyState" style="display:none;">
@@ -662,16 +767,27 @@ const functionHeaders = {
   'Content-Type': 'application/json'
 };
 
+// じぶん順の一括リナンバー用: upsert(merge-duplicates)でid一致行だけを更新
+const upsertHeaders = {
+  'apikey': SUPABASE_KEY,
+  'Authorization': `Bearer ${SUPABASE_KEY}`,
+  'Content-Type': 'application/json',
+  'Prefer': 'resolution=merge-duplicates,return=minimal'
+};
+
 const API = `${SUPABASE_URL}/rest/v1/lyrics`;
 const FORMAT_ENDPOINT = `${SUPABASE_URL}/functions/v1/format-lyrics`;
 
 const WORLD_TAG = { minato: '藤宮湊', noa: 'ノア' };
+const SORT_MODES = ['new', 'old', 'manual'];
+const DEFAULT_SORT_MODE = 'new';
 
 let allCards = [];
 let editingId = null;
 
 // DOM
 const searchInput = document.getElementById('searchInput');
+const sortToggle = document.getElementById('sortToggle');
 const cardList = document.getElementById('cardList');
 const countBadge = document.getElementById('countBadge');
 const emptyState = document.getElementById('emptyState');
@@ -765,6 +881,7 @@ function setWorld(w) {
   localStorage.setItem('lyricsAppWorld', w);
   updateWorldUI();
   applyNoaTime(true);
+  updateSortToggleUI();
   renderCards();
 }
 
@@ -775,6 +892,53 @@ worldToggle.addEventListener('click', () => {
 updateWorldUI();
 applyNoaTime(true);
 setInterval(() => applyNoaTime(false), 60000);
+
+// ---- 並び順（新しい順/古い順/じぶん順）----
+// 並び順の記憶はワールドごとに独立
+function getSortMode() {
+  return localStorage.getItem(`sortMode_${getWorld()}`) || DEFAULT_SORT_MODE;
+}
+
+function setSortMode(mode) {
+  if (!SORT_MODES.includes(mode)) return;
+  localStorage.setItem(`sortMode_${getWorld()}`, mode);
+  updateSortToggleUI();
+  renderCards();
+}
+
+function updateSortToggleUI() {
+  const mode = getSortMode();
+  sortToggle.querySelectorAll('.sort-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.mode === mode);
+  });
+}
+
+sortToggle.addEventListener('click', (e) => {
+  const btn = e.target.closest('.sort-btn');
+  if (btn) setSortMode(btn.dataset.mode);
+});
+
+function compareCards(a, b, mode) {
+  if (mode === 'new') return new Date(b.created_at) - new Date(a.created_at);
+  if (mode === 'old') return new Date(a.created_at) - new Date(b.created_at);
+  // じぶん順: sort_orderの昇順。null同士は登録日の新しい順で末尾に。
+  const aNull = a.sort_order === null || a.sort_order === undefined;
+  const bNull = b.sort_order === null || b.sort_order === undefined;
+  if (aNull && bNull) return new Date(b.created_at) - new Date(a.created_at);
+  if (aNull) return 1;
+  if (bNull) return -1;
+  return a.sort_order - b.sort_order;
+}
+
+// 新規登録曲はじぶん順の一番上に来るよう、そのタグの最小sort_order - 1を割り当てる
+function nextSortOrderForTag(tag) {
+  const values = allCards
+    .filter(c => c.tag === tag && c.sort_order !== null && c.sort_order !== undefined)
+    .map(c => c.sort_order);
+  return values.length ? Math.min(...values) - 1 : 0;
+}
+
+updateSortToggleUI();
 
 // ---- カード表示 ----
 async function fetchCards() {
@@ -801,8 +965,14 @@ function cardMatchesWorld(c) {
   return !c.tag || c.tag === WORLD_TAG[getWorld()];
 }
 
+const GRIP_ICON = `<svg class="icon icon-grip" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <circle cx="9" cy="12" r="1" /><circle cx="9" cy="5" r="1" /><circle cx="9" cy="19" r="1" />
+  <circle cx="15" cy="12" r="1" /><circle cx="15" cy="5" r="1" /><circle cx="15" cy="19" r="1" />
+</svg>`;
+
 function renderCards() {
   const query = searchInput.value.trim().toLowerCase();
+  const mode = getSortMode();
   let filtered = allCards.filter(cardMatchesWorld);
   if (query) {
     filtered = filtered.filter(c =>
@@ -811,6 +981,10 @@ function renderCards() {
       c.character_name.toLowerCase().includes(query)
     );
   }
+  filtered = filtered.slice().sort((a, b) => compareCards(a, b, mode));
+
+  // 検索で一部だけ表示されている間は「そのタグの全曲」が定義できないためドラッグ無効
+  const draggable = mode === 'manual' && !query;
 
   if (filtered.length === 0) {
     cardList.innerHTML = '';
@@ -823,11 +997,14 @@ function renderCards() {
       : `全${filtered.length}曲`;
     cardList.innerHTML = filtered.map(c => `
       <div class="card" data-id="${c.id}">
-        <div class="card-header">
-          <div class="card-title">${highlightText(c.title || '無題', query)}</div>
-          ${c.character_name ? `<div class="card-character">${escapeHtml(c.character_name)}</div>` : ''}
+        ${draggable ? `<span class="card-grip" title="ドラッグして並び替え">${GRIP_ICON}</span>` : ''}
+        <div class="card-body">
+          <div class="card-header">
+            <div class="card-title">${highlightText(c.title || '無題', query)}</div>
+            ${c.character_name ? `<div class="card-character">${escapeHtml(c.character_name)}</div>` : ''}
+          </div>
+          <div class="card-lyrics">${highlightText(c.lyrics, query)}</div>
         </div>
-        <div class="card-lyrics">${highlightText(c.lyrics, query)}</div>
       </div>
     `).join('');
   }
@@ -881,6 +1058,7 @@ async function saveCard() {
   };
   if (!editingId) {
     data.tag = WORLD_TAG[getWorld()];
+    data.sort_order = nextSortOrderForTag(data.tag);
   }
 
   btnSave.disabled = true;
@@ -1022,6 +1200,7 @@ btnImportRegister.addEventListener('click', async () => {
   btnImportRegister.disabled = true;
   try {
     const tag = WORLD_TAG[getWorld()];
+    const sort_order = nextSortOrderForTag(tag);
     await fetch(API, {
       method: 'POST',
       headers,
@@ -1030,9 +1209,13 @@ btnImportRegister.addEventListener('click', async () => {
         tag,
         title,
         lyrics,
+        sort_order,
         updated_at: new Date().toISOString()
       })
     });
+    // 連続登録中はfetchCardsを挟まないので、次のnextSortOrderForTagが
+    // この曲を拾えるようローカルのallCardsにも反映しておく
+    allCards.push({ tag, sort_order });
     importCount++;
     updateImportCounter();
     importRaw.value = '';
@@ -1060,10 +1243,129 @@ btnEdit.addEventListener('click', () => {
 });
 
 cardList.addEventListener('click', (e) => {
+  if (e.target.closest('.card-grip')) return;
   const el = e.target.closest('.card');
   if (!el) return;
   const card = allCards.find(c => c.id === el.dataset.id);
   if (card) openDetailModal(card);
+});
+
+// ---- じぶん順のドラッグ並べ替え ----
+// Pointer Eventsでマウス・タッチを一本化。ハンドル(touch-action:none)からの
+// ドラッグ開始のみ発動、行本体タップは従来通り曲を開く。
+let dragState = null;
+
+function startDrag(e, grip) {
+  const card = grip.closest('.card');
+  if (!card) return;
+  e.preventDefault();
+
+  const rect = card.getBoundingClientRect();
+  const placeholder = document.createElement('div');
+  placeholder.className = 'drag-placeholder';
+  placeholder.style.height = `${rect.height}px`;
+  cardList.insertBefore(placeholder, card);
+
+  card.classList.add('dragging');
+  card.style.position = 'fixed';
+  card.style.top = `${rect.top}px`;
+  card.style.left = `${rect.left}px`;
+  card.style.width = `${rect.width}px`;
+
+  dragState = {
+    card,
+    placeholder,
+    pointerId: e.pointerId,
+    offsetX: e.clientX - rect.left,
+    offsetY: e.clientY - rect.top
+  };
+
+  grip.setPointerCapture(e.pointerId);
+  document.addEventListener('pointermove', onDragMove);
+  document.addEventListener('pointerup', onDragEnd);
+  document.addEventListener('pointercancel', onDragEnd);
+}
+
+function onDragMove(e) {
+  if (!dragState || e.pointerId !== dragState.pointerId) return;
+  const { card, placeholder, offsetX, offsetY } = dragState;
+  card.style.top = `${e.clientY - offsetY}px`;
+  card.style.left = `${e.clientX - offsetX}px`;
+
+  const siblings = Array.from(cardList.children).filter(el => el !== card && el !== placeholder);
+  let target = null;
+  for (const sib of siblings) {
+    const r = sib.getBoundingClientRect();
+    if (e.clientY < r.top + r.height / 2) { target = sib; break; }
+  }
+  if (target) cardList.insertBefore(placeholder, target);
+  else cardList.appendChild(placeholder);
+}
+
+async function onDragEnd(e) {
+  if (!dragState || e.pointerId !== dragState.pointerId) return;
+  const { card, placeholder } = dragState;
+  document.removeEventListener('pointermove', onDragMove);
+  document.removeEventListener('pointerup', onDragEnd);
+  document.removeEventListener('pointercancel', onDragEnd);
+
+  cardList.insertBefore(card, placeholder);
+  placeholder.remove();
+  card.classList.remove('dragging');
+  card.style.position = '';
+  card.style.top = '';
+  card.style.left = '';
+  card.style.width = '';
+  dragState = null;
+
+  const tag = WORLD_TAG[getWorld()];
+  const domOrderIds = Array.from(cardList.children).map(el => el.dataset.id);
+  const newOrderIds = domOrderIds.filter(id => {
+    const c = allCards.find(x => x.id === id);
+    return c && c.tag === tag;
+  });
+
+  const prevOrderIds = allCards
+    .filter(c => c.tag === tag)
+    .slice()
+    .sort((a, b) => compareCards(a, b, 'manual'))
+    .map(c => c.id);
+
+  if (newOrderIds.join(',') === prevOrderIds.join(',')) return; // 変化なし
+
+  // 画面は即時反映済み。allCardsのsort_orderも先に更新してからDBへバッチ保存。
+  const prevValues = new Map(allCards.filter(c => c.tag === tag).map(c => [c.id, c.sort_order]));
+  newOrderIds.forEach((id, i) => {
+    const c = allCards.find(x => x.id === id);
+    if (c) c.sort_order = i;
+  });
+
+  try {
+    await persistManualOrder(newOrderIds);
+  } catch (err) {
+    alert('並び替えの保存に失敗した: ' + err.message);
+    // DBと画面の食い違いを残さないよう、ドラッグ前の状態に戻す
+    prevValues.forEach((v, id) => {
+      const c = allCards.find(x => x.id === id);
+      if (c) c.sort_order = v;
+    });
+    renderCards();
+  }
+}
+
+async function persistManualOrder(orderedIds) {
+  const updates = orderedIds.map((id, i) => ({ id, sort_order: i }));
+  const res = await fetch(API, {
+    method: 'POST',
+    headers: upsertHeaders,
+    body: JSON.stringify(updates)
+  });
+  if (!res.ok) throw new Error(`${res.status}`);
+}
+
+cardList.addEventListener('pointerdown', (e) => {
+  const grip = e.target.closest('.card-grip');
+  if (grip) startDrag(e, grip);
 });
 
 editModal.addEventListener('click', (e) => {
