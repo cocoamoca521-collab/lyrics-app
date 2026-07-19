@@ -86,6 +86,14 @@ body {
   transition: background-color var(--fade) ease, color var(--fade) ease;
 }
 
+/* モーダル表示中、一覧側のスクロールを完全に固定する（lockBodyScroll参照） */
+body.scroll-locked {
+  position: fixed;
+  left: 0;
+  right: 0;
+  overflow: hidden;
+}
+
 header {
   background: var(--header-bg);
   backdrop-filter: var(--header-blur);
@@ -341,6 +349,7 @@ main {
   border-radius: 16px 16px 0 0;
   padding: 20px;
   overflow-y: auto;
+  overscroll-behavior-y: contain;
   animation: slideUp .25s ease-out;
   backdrop-filter: var(--header-blur);
   -webkit-backdrop-filter: var(--header-blur);
@@ -1016,6 +1025,31 @@ function resetScroll(...els) {
   els.forEach(el => { if (el) el.scrollTop = 0; });
 }
 
+// モーダル表示中は一覧(body)を完全に固定する。
+// overlay越しのタッチが背面へスクロールチェイニングして、モーダルを
+// 閉じた後に一覧が「少しだけ」ずれて見える不具合の根治策。
+// bodyLockCountで多重open/closeに備える（現状は同時に1つしか開かない想定だが念のため）。
+let bodyLockCount = 0;
+let savedScrollY = 0;
+
+function lockBodyScroll() {
+  if (bodyLockCount === 0) {
+    savedScrollY = window.scrollY;
+    document.body.style.top = `-${savedScrollY}px`;
+    document.body.classList.add('scroll-locked');
+  }
+  bodyLockCount++;
+}
+
+function unlockBodyScroll() {
+  bodyLockCount = Math.max(0, bodyLockCount - 1);
+  if (bodyLockCount === 0) {
+    document.body.classList.remove('scroll-locked');
+    document.body.style.top = '';
+    window.scrollTo(0, savedScrollY);
+  }
+}
+
 function openEditModal(card) {
   editingId = card ? card.id : null;
   modalTitle.textContent = card ? '編集' : '新規追加';
@@ -1024,12 +1058,14 @@ function openEditModal(card) {
   inputLyrics.value = card ? card.lyrics : '';
   editModal.classList.add('active');
   resetScroll(editModal.querySelector('.modal'), inputLyrics);
+  lockBodyScroll();
   inputTitle.focus();
 }
 
 function closeEditModal() {
   editModal.classList.remove('active');
   editingId = null;
+  unlockBodyScroll();
 }
 
 function openDetailModal(card) {
@@ -1042,11 +1078,13 @@ function openDetailModal(card) {
   detailMeta.textContent = `最終更新: ${d.toLocaleDateString('ja-JP')} ${d.toLocaleTimeString('ja-JP', {hour:'2-digit', minute:'2-digit'})}`;
   detailModal.classList.add('active');
   resetScroll(detailModal.querySelector('.modal'));
+  lockBodyScroll();
 }
 
 function closeDetailModal() {
   detailModal.classList.remove('active');
   currentDetailId = null;
+  unlockBodyScroll();
 }
 
 async function saveCard() {
@@ -1123,11 +1161,13 @@ function openImportModal() {
   importRaw.value = '';
   showImportPaste();
   importModal.classList.add('active');
+  lockBodyScroll();
   importRaw.focus();
 }
 
 function closeImportModal() {
   importModal.classList.remove('active');
+  unlockBodyScroll();
 }
 
 async function requestFormat(raw, opts) {
