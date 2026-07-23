@@ -886,12 +886,17 @@ function updateWorldUI() {
   updateThemeColor();
 }
 
+// ワールドごとの一覧スクロール位置。永続化は不要なのでメモリ上のみで保持。
+const worldScrollY = { minato: 0, noa: 0 };
+
 function setWorld(w) {
+  worldScrollY[getWorld()] = window.scrollY;
   localStorage.setItem('lyricsAppWorld', w);
   updateWorldUI();
   applyNoaTime(true);
   updateSortToggleUI();
   renderCards();
+  window.scrollTo(0, worldScrollY[w] || 0);
 }
 
 worldToggle.addEventListener('click', () => {
@@ -955,6 +960,8 @@ async function fetchCards() {
   if (!res.ok) throw new Error('fetch failed');
   allCards = await res.json();
   renderCards();
+  // 初回表示・データ再取得時はワールド別の記憶に関わらず常に最上部から
+  window.scrollTo(0, 0);
 }
 
 function escapeHtml(str) {
