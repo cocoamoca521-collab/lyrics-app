@@ -426,6 +426,55 @@ main {
   padding: 12px 0;
 }
 
+/* 歌詞コピー（詳細の右上にそっと置く） */
+.copy-btn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 10px;
+  margin-left: 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-dim);
+  font-family: inherit;
+  font-size: .75rem;
+  letter-spacing: .04em;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: color .2s, border-color .2s, background-color .2s, transform .12s;
+}
+
+.copy-btn:hover { color: var(--accent); border-color: var(--accent); }
+.copy-btn:active { transform: scale(.94); }
+
+.copy-btn .icon {
+  width: 15px;
+  height: 15px;
+}
+
+.copy-btn .icon-check { display: none; }
+
+.copy-btn.copied {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: var(--surface2);
+}
+
+.copy-btn.copied .icon-copy { display: none; }
+.copy-btn.copied .icon-check {
+  display: inline-block;
+  animation: copyPop .3s ease-out;
+}
+
+@keyframes copyPop {
+  0% { transform: scale(.4); opacity: 0; }
+  70% { transform: scale(1.15); opacity: 1; }
+  100% { transform: scale(1); }
+}
+
 .detail-meta {
   font-size: .8rem;
   color: var(--text-dim);
@@ -701,6 +750,16 @@ main {
         <div class="card-title" id="detailTitle"></div>
         <div class="card-character" id="detailCharacter" style="display:inline-block; margin-top:6px;"></div>
       </div>
+      <button class="copy-btn" id="btnCopyLyrics" type="button" aria-label="歌詞をコピー">
+        <svg class="icon icon-copy" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
+          <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
+        </svg>
+        <svg class="icon icon-check" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M20 6 9 17l-5-5" />
+        </svg>
+        <span class="copy-label">コピー</span>
+      </button>
     </div>
     <div class="detail-lyrics" id="detailLyrics"></div>
     <div class="detail-meta" id="detailMeta"></div>
@@ -811,6 +870,7 @@ const inputLyrics = document.getElementById('inputLyrics');
 const btnCancel = document.getElementById('btnCancel');
 const btnSave = document.getElementById('btnSave');
 const btnDetailClose = document.getElementById('btnDetailClose');
+const btnCopyLyrics = document.getElementById('btnCopyLyrics');
 const btnDelete = document.getElementById('btnDelete');
 const btnEdit = document.getElementById('btnEdit');
 const detailTitle = document.getElementById('detailTitle');
@@ -1081,11 +1141,51 @@ function openDetailModal(card) {
   detailCharacter.textContent = card.character_name;
   detailCharacter.style.display = card.character_name ? 'inline-block' : 'none';
   detailLyrics.textContent = card.lyrics;
+  resetCopyButton();
   const d = new Date(card.updated_at);
   detailMeta.textContent = `最終更新: ${d.toLocaleDateString('ja-JP')} ${d.toLocaleTimeString('ja-JP', {hour:'2-digit', minute:'2-digit'})}`;
   detailModal.classList.add('active');
   resetScroll(detailModal.querySelector('.modal'));
   lockBodyScroll();
+}
+
+// ---- 歌詞コピー ----
+let copyResetTimer = null;
+
+function resetCopyButton() {
+  clearTimeout(copyResetTimer);
+  btnCopyLyrics.classList.remove('copied');
+  btnCopyLyrics.querySelector('.copy-label').textContent = 'コピー';
+}
+
+async function copyText(text) {
+  if (navigator.clipboard && window.isSecureContext) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch (_) { /* 下のフォールバックへ */ }
+  }
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.setAttribute('readonly', '');
+  ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;pointer-events:none;';
+  document.body.appendChild(ta);
+  ta.select();
+  ta.setSelectionRange(0, text.length);
+  let ok = false;
+  try { ok = document.execCommand('copy'); } catch (_) {}
+  ta.remove();
+  return ok;
+}
+
+async function copyLyrics() {
+  const card = allCards.find(c => c.id === currentDetailId);
+  if (!card) return;
+  const ok = await copyText(card.lyrics || '');
+  clearTimeout(copyResetTimer);
+  btnCopyLyrics.classList.toggle('copied', ok);
+  btnCopyLyrics.querySelector('.copy-label').textContent = ok ? 'コピーしました' : 'コピーできませんでした';
+  copyResetTimer = setTimeout(resetCopyButton, 1800);
 }
 
 function closeDetailModal() {
@@ -1282,6 +1382,7 @@ fabAdd.addEventListener('click', () => openEditModal(null));
 btnCancel.addEventListener('click', closeEditModal);
 btnSave.addEventListener('click', saveCard);
 btnDetailClose.addEventListener('click', closeDetailModal);
+btnCopyLyrics.addEventListener('click', copyLyrics);
 btnDelete.addEventListener('click', () => deleteCard(currentDetailId));
 btnEdit.addEventListener('click', () => {
   const card = allCards.find(c => c.id === currentDetailId);
