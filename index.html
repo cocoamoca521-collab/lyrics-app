@@ -426,15 +426,14 @@ main {
   padding: 12px 0;
 }
 
-/* 歌詞コピー（詳細の右上にそっと置く） */
-.copy-btn {
+/* 控えめなピル型ボタン（歌詞コピー・曲目リスト共通） */
+.pill-btn {
   flex-shrink: 0;
   display: inline-flex;
   align-items: center;
   gap: 6px;
   height: 32px;
   padding: 0 10px;
-  margin-left: 12px;
   border-radius: 999px;
   border: 1px solid var(--border);
   background: transparent;
@@ -447,13 +446,15 @@ main {
   transition: color .2s, border-color .2s, background-color .2s, transform .12s;
 }
 
-.copy-btn:hover { color: var(--accent); border-color: var(--accent); }
-.copy-btn:active { transform: scale(.94); }
+.pill-btn:hover { color: var(--accent); border-color: var(--accent); }
+.pill-btn:active { transform: scale(.94); }
 
-.copy-btn .icon {
+.pill-btn .icon {
   width: 15px;
   height: 15px;
 }
+
+.copy-btn { margin-left: 12px; }
 
 .copy-btn .icon-check { display: none; }
 
@@ -542,11 +543,58 @@ main {
   height: 22px;
 }
 
+.list-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 12px;
+  min-height: 32px;
+}
+
 .count-badge {
   font-size: .85rem;
   color: var(--text-dim);
-  margin-bottom: 12px;
 }
+
+/* 曲目リスト（タイトルだけ・じぶん順） */
+.titles-sub {
+  font-size: .8rem;
+  color: var(--text-dim);
+  margin: -8px 0 12px;
+}
+
+.titles-list {
+  list-style: none;
+  counter-reset: song;
+}
+
+.titles-list li {
+  counter-increment: song;
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 11px 4px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: color .15s;
+}
+
+.titles-list li:last-child { border-bottom: none; }
+
+.titles-list li::before {
+  content: counter(song, decimal-leading-zero);
+  flex-shrink: 0;
+  min-width: 1.6em;
+  font-size: .75rem;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: .04em;
+}
+
+.titles-list li:hover { color: var(--accent); }
+
+.titles-list .untitled { color: var(--text-dim); }
 
 .sort-toggle {
   display: flex;
@@ -696,7 +744,19 @@ main {
       <span>じぶん順</span>
     </button>
   </div>
-  <div class="count-badge" id="countBadge"></div>
+  <div class="list-bar">
+    <div class="count-badge" id="countBadge"></div>
+    <button class="pill-btn" id="btnTitles" type="button" style="display:none;">
+      <svg class="icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 15V6" />
+        <path d="M18.5 18a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z" />
+        <path d="M12 12H3" />
+        <path d="M16 6H3" />
+        <path d="M12 18H3" />
+      </svg>
+      <span>曲目リスト</span>
+    </button>
+  </div>
   <div class="card-list" id="cardList"></div>
   <div class="empty-state" id="emptyState" style="display:none;">
     <svg class="icon icon-empty" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -750,7 +810,7 @@ main {
         <div class="card-title" id="detailTitle"></div>
         <div class="card-character" id="detailCharacter" style="display:inline-block; margin-top:6px;"></div>
       </div>
-      <button class="copy-btn" id="btnCopyLyrics" type="button" aria-label="歌詞をコピー">
+      <button class="pill-btn copy-btn" id="btnCopyLyrics" type="button" aria-label="歌詞をコピー">
         <svg class="icon icon-copy" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
           <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
@@ -769,6 +829,18 @@ main {
         <button class="btn btn-danger btn-sm" id="btnDelete">削除</button>
         <button class="btn btn-primary btn-sm" id="btnEdit">編集</button>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- 曲目リストモーダル -->
+<div class="modal-overlay" id="titlesModal">
+  <div class="modal">
+    <h2>曲目リスト</h2>
+    <div class="titles-sub" id="titlesSub"></div>
+    <ol class="titles-list" id="titlesList"></ol>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" id="btnTitlesClose">閉じる</button>
     </div>
   </div>
 </div>
@@ -871,6 +943,11 @@ const btnCancel = document.getElementById('btnCancel');
 const btnSave = document.getElementById('btnSave');
 const btnDetailClose = document.getElementById('btnDetailClose');
 const btnCopyLyrics = document.getElementById('btnCopyLyrics');
+const btnTitles = document.getElementById('btnTitles');
+const titlesModal = document.getElementById('titlesModal');
+const titlesSub = document.getElementById('titlesSub');
+const titlesList = document.getElementById('titlesList');
+const btnTitlesClose = document.getElementById('btnTitlesClose');
 const btnDelete = document.getElementById('btnDelete');
 const btnEdit = document.getElementById('btnEdit');
 const detailTitle = document.getElementById('detailTitle');
@@ -1050,6 +1127,7 @@ function renderCards() {
   const query = searchInput.value.trim().toLowerCase();
   const mode = getSortMode();
   let filtered = allCards.filter(cardMatchesWorld);
+  btnTitles.style.display = filtered.length ? '' : 'none';
   if (query) {
     filtered = filtered.filter(c =>
       c.title.toLowerCase().includes(query) ||
@@ -1147,6 +1225,26 @@ function openDetailModal(card) {
   detailModal.classList.add('active');
   resetScroll(detailModal.querySelector('.modal'));
   lockBodyScroll();
+}
+
+// ---- 曲目リスト（タイトルだけ・常にじぶん順。検索中でもそのキャラの全曲）----
+function openTitlesModal() {
+  const cards = allCards
+    .filter(cardMatchesWorld)
+    .sort((a, b) => compareCards(a, b, 'manual'));
+  titlesSub.textContent = `${WORLD_TAG[getWorld()]} ・ 全${cards.length}曲 ・ じぶん順`;
+  titlesList.innerHTML = cards.map(c => c.title
+    ? `<li data-id="${c.id}">${escapeHtml(c.title)}</li>`
+    : `<li data-id="${c.id}" class="untitled">無題</li>`
+  ).join('');
+  titlesModal.classList.add('active');
+  resetScroll(titlesModal.querySelector('.modal'));
+  lockBodyScroll();
+}
+
+function closeTitlesModal() {
+  titlesModal.classList.remove('active');
+  unlockBodyScroll();
 }
 
 // ---- 歌詞コピー ----
@@ -1383,6 +1481,16 @@ btnCancel.addEventListener('click', closeEditModal);
 btnSave.addEventListener('click', saveCard);
 btnDetailClose.addEventListener('click', closeDetailModal);
 btnCopyLyrics.addEventListener('click', copyLyrics);
+btnTitles.addEventListener('click', openTitlesModal);
+btnTitlesClose.addEventListener('click', closeTitlesModal);
+titlesModal.addEventListener('click', (e) => {
+  if (e.target === titlesModal) return closeTitlesModal();
+  const li = e.target.closest('li[data-id]');
+  if (!li) return;
+  const card = allCards.find(c => c.id === li.dataset.id);
+  closeTitlesModal();
+  if (card) openDetailModal(card);
+});
 btnDelete.addEventListener('click', () => deleteCard(currentDetailId));
 btnEdit.addEventListener('click', () => {
   const card = allCards.find(c => c.id === currentDetailId);
