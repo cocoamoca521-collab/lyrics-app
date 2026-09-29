@@ -570,7 +570,7 @@ main {
 }
 
 .titles-list li {
-  counter-increment: song;
+  counter-increment: song -1;
   display: flex;
   align-items: baseline;
   gap: 12px;
@@ -1233,6 +1233,8 @@ function openTitlesModal() {
     .filter(cardMatchesWorld)
     .sort((a, b) => compareCards(a, b, 'manual'));
   titlesSub.textContent = `${WORLD_TAG[getWorld()]} ・ 全${cards.length}曲 ・ じぶん順`;
+  // 番号は下から1、上ほど大きく（新しい曲が上に来るので上が最新番号）
+  titlesList.style.counterReset = `song ${cards.length + 1}`;
   titlesList.innerHTML = cards.map(c => c.title
     ? `<li data-id="${c.id}">${escapeHtml(c.title)}</li>`
     : `<li data-id="${c.id}" class="untitled">無題</li>`
