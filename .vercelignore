@@ -1,0 +1,7 @@
+supabase/
+scripts/
+db/
+import.js
+DEPLOY_NOTES.md
+.env*
+*.db

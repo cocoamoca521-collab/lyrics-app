@@ -758,34 +758,14 @@ main {
 </div>
 
 <script>
-const SUPABASE_URL = 'https://dbpferzntxfaxkucusne.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_JUvwqzfkKsDR7Xwm3jJ6ug_TcVaeMwR';
+const headers = { 'Content-Type': 'application/json' };
 
-const headers = {
-  'apikey': SUPABASE_KEY,
-  'Authorization': `Bearer ${SUPABASE_KEY}`,
-  'Content-Type': 'application/json',
-  'Prefer': 'return=representation'
-};
+const API = '/api/songs';
+const FORMAT_ENDPOINT = '/api/format-lyrics';
 
-// Edge Function用: PostgREST専用の Prefer は含めない
-// （Access-Control-Allow-Headers に無いヘッダーを送るとプリフライトで弾かれる）
-const functionHeaders = {
-  'apikey': SUPABASE_KEY,
-  'Authorization': `Bearer ${SUPABASE_KEY}`,
-  'Content-Type': 'application/json'
-};
-
-// じぶん順の一括リナンバー用: upsert(merge-duplicates)でid一致行だけを更新
-const upsertHeaders = {
-  'apikey': SUPABASE_KEY,
-  'Authorization': `Bearer ${SUPABASE_KEY}`,
-  'Content-Type': 'application/json',
-  'Prefer': 'resolution=merge-duplicates,return=minimal'
-};
-
-const API = `${SUPABASE_URL}/rest/v1/lyrics`;
-const FORMAT_ENDPOINT = `${SUPABASE_URL}/functions/v1/format-lyrics`;
+function songUrl(id) {
+  return `${API}?id=${encodeURIComponent(id)}`;
+}
 
 const WORLD_TAG = { minato: '藤宮湊', noa: 'ノア' };
 const SORT_MODES = ['new', 'old', 'manual'];
@@ -956,7 +936,7 @@ updateSortToggleUI();
 
 // ---- カード表示 ----
 async function fetchCards() {
-  const res = await fetch(`${API}?order=updated_at.desc`, { headers });
+  const res = await fetch(API);
   if (!res.ok) throw new Error('fetch failed');
   allCards = await res.json();
   renderCards();
@@ -1111,7 +1091,7 @@ async function saveCard() {
 
   try {
     if (editingId) {
-      await fetch(`${API}?id=eq.${editingId}`, {
+      await fetch(songUrl(editingId), {
         method: 'PATCH', headers, body: JSON.stringify(data)
       });
     } else {
@@ -1131,7 +1111,7 @@ async function saveCard() {
 
 async function deleteCard(id) {
   if (!confirm('この歌詞カードを削除しますか？')) return;
-  await fetch(`${API}?id=eq.${id}`, { method: 'DELETE', headers });
+  await fetch(songUrl(id), { method: 'DELETE' });
   closeDetailModal();
   await fetchCards();
 }
@@ -1180,7 +1160,7 @@ function closeImportModal() {
 async function requestFormat(raw, opts) {
   const res = await fetch(FORMAT_ENDPOINT, {
     method: 'POST',
-    headers: functionHeaders,
+    headers,
     body: JSON.stringify({
       rawText: raw,
       keepStructureTags: opts.keepStructureTags,
@@ -1403,8 +1383,8 @@ async function onDragEnd(e) {
 async function persistManualOrder(orderedIds) {
   const updates = orderedIds.map((id, i) => ({ id, sort_order: i }));
   const res = await fetch(API, {
-    method: 'POST',
-    headers: upsertHeaders,
+    method: 'PUT',
+    headers,
     body: JSON.stringify(updates)
   });
   if (!res.ok) throw new Error(`${res.status}`);
