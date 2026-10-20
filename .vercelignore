@@ -1,4 +1,5 @@
 supabase/
+pages/
 scripts/
 db/
 import.js

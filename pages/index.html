@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#2fb6c4">
+<title>歌詞カード管理はお引っ越ししました</title>
+<link rel="icon" href="data:,">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'Shippori Mincho', serif, -apple-system, BlinkMacSystemFont, 'Noto Sans JP', sans-serif;
+  background: #eef7f6;
+  color: #17383b;
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+}
+.card {
+  background: rgba(255,255,255,.75);
+  border: 1px solid rgba(23,56,59,.15);
+  border-radius: 14px;
+  box-shadow: 0 4px 20px rgba(47,182,196,.15);
+  padding: 28px 22px;
+  max-width: 420px;
+  width: 100%;
+  text-align: center;
+  line-height: 1.8;
+}
+h1 { font-size: 1.2rem; margin-bottom: 12px; }
+p { font-size: .95rem; color: #5c7a7d; }
+.btn {
+  display: block;
+  margin: 20px 0 16px;
+  word-break: keep-all;
+  padding: 14px 18px;
+  border-radius: 10px;
+  background: #2fb6c4;
+  color: #fff;
+  font-weight: 600;
+  text-decoration: none;
+  word-break: break-all;
+}
+.url { font-size: .8rem; margin: -8px 0 16px; word-break: break-all; }
+.note { font-size: .85rem; }
+</style>
+</head>
+<body>
+<main class="card">
+  <h1>歌詞カード管理はお引っ越ししました</h1>
+  <a class="btn" href="https://lyrics-app-psi.vercel.app/">新しい場所を開く</a>
+  <p class="url">lyrics-app-psi.vercel.app</p>
+  <p class="note">ホーム画面のアプリは、新しい場所を開いてから入れ直してね。<br>このページのアプリは削除して大丈夫。</p>
+</main>
+<script>
+// 旧アプリの Service Worker とキャッシュを片付ける
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then((regs) => regs.forEach((r) => r.unregister()));
+}
+if ('caches' in window) {
+  caches.keys().then((keys) => keys.forEach((k) => caches.delete(k)));
+}
+</script>
+</body>
+</html>
