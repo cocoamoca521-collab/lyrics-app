@@ -757,6 +757,23 @@ main {
   </div>
 </div>
 
+<!-- アプリの鍵モーダル（APIが401を返した時だけ開く） -->
+<div class="modal-overlay" id="tokenModal">
+  <div class="modal">
+    <h2>アプリの鍵</h2>
+    <p class="import-tag-info">この端末で最初の1回だけ入力してね</p>
+    <div class="import-error" id="tokenError" style="display:none;">
+      <span>鍵がちがうみたい。もう一度入れてね</span>
+    </div>
+    <div class="form-group">
+      <input type="password" id="inputToken" placeholder="鍵を入力" autocomplete="off">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" id="btnTokenSave">保存</button>
+    </div>
+  </div>
+</div>
+
 <script>
 const headers = { 'Content-Type': 'application/json' };
 
@@ -765,6 +782,49 @@ const FORMAT_ENDPOINT = '/api/format-lyrics';
 
 function songUrl(id) {
   return `${API}?id=${encodeURIComponent(id)}`;
+}
+
+// ---- アプリの鍵（x-app-token）----
+const TOKEN_KEY = 'lyricsAppToken';
+const tokenModal = document.getElementById('tokenModal');
+const inputToken = document.getElementById('inputToken');
+const tokenError = document.getElementById('tokenError');
+const btnTokenSave = document.getElementById('btnTokenSave');
+
+function openTokenModal(wasWrong) {
+  tokenError.style.display = wasWrong ? 'flex' : 'none';
+  if (tokenModal.classList.contains('active')) return;
+  inputToken.value = '';
+  tokenModal.classList.add('active');
+  lockBodyScroll();
+  inputToken.focus();
+}
+
+function saveToken() {
+  const token = inputToken.value.trim();
+  if (!token) return;
+  localStorage.setItem(TOKEN_KEY, token);
+  tokenModal.classList.remove('active');
+  unlockBodyScroll();
+  fetchCards().catch(() => {});
+}
+
+btnTokenSave.addEventListener('click', saveToken);
+inputToken.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') saveToken();
+});
+
+async function apiFetch(url, options = {}) {
+  const token = localStorage.getItem(TOKEN_KEY) || '';
+  const res = await fetch(url, {
+    ...options,
+    headers: { ...options.headers, 'x-app-token': token }
+  });
+  if (res.status === 401) {
+    openTokenModal(Boolean(token));
+    throw new Error('アプリの鍵が必要です');
+  }
+  return res;
 }
 
 const WORLD_TAG = { minato: '藤宮湊', noa: 'ノア' };
@@ -936,7 +996,7 @@ updateSortToggleUI();
 
 // ---- カード表示 ----
 async function fetchCards() {
-  const res = await fetch(API);
+  const res = await apiFetch(API);
   if (!res.ok) throw new Error('fetch failed');
   allCards = await res.json();
   renderCards();
@@ -1091,11 +1151,11 @@ async function saveCard() {
 
   try {
     if (editingId) {
-      await fetch(songUrl(editingId), {
+      await apiFetch(songUrl(editingId), {
         method: 'PATCH', headers, body: JSON.stringify(data)
       });
     } else {
-      await fetch(API, {
+      await apiFetch(API, {
         method: 'POST', headers, body: JSON.stringify(data)
       });
     }
@@ -1111,7 +1171,7 @@ async function saveCard() {
 
 async function deleteCard(id) {
   if (!confirm('この歌詞カードを削除しますか？')) return;
-  await fetch(songUrl(id), { method: 'DELETE' });
+  await apiFetch(songUrl(id), { method: 'DELETE' });
   closeDetailModal();
   await fetchCards();
 }
@@ -1158,7 +1218,7 @@ function closeImportModal() {
 }
 
 async function requestFormat(raw, opts) {
-  const res = await fetch(FORMAT_ENDPOINT, {
+  const res = await apiFetch(FORMAT_ENDPOINT, {
     method: 'POST',
     headers,
     body: JSON.stringify({
@@ -1228,7 +1288,7 @@ btnImportRegister.addEventListener('click', async () => {
   try {
     const tag = WORLD_TAG[getWorld()];
     const sort_order = nextSortOrderForTag(tag);
-    await fetch(API, {
+    await apiFetch(API, {
       method: 'POST',
       headers,
       body: JSON.stringify({
@@ -1382,7 +1442,7 @@ async function onDragEnd(e) {
 
 async function persistManualOrder(orderedIds) {
   const updates = orderedIds.map((id, i) => ({ id, sort_order: i }));
-  const res = await fetch(API, {
+  const res = await apiFetch(API, {
     method: 'PUT',
     headers,
     body: JSON.stringify(updates)

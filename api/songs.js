@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { getDb, toObjects } from './_db.js';
+import { getDb, toObjects, checkAppToken } from './_db.js';
 
 const WRITABLE_COLUMNS = ['character_name', 'title', 'lyrics', 'tag', 'sort_order', 'updated_at'];
 
@@ -78,6 +78,7 @@ async function reorderSongs(db, req, res) {
 }
 
 export default async function handler(req, res) {
+  if (!checkAppToken(req)) return res.status(401).json({ error: 'unauthorized' });
   const db = getDb();
   try {
     switch (req.method) {

@@ -1,6 +1,7 @@
 // 連続インポートモード用のAI整形中継。
 // Anthropic APIキーはVercelの環境変数にのみ置く（クライアントには一切渡さない）。
 import Anthropic from '@anthropic-ai/sdk';
+import { checkAppToken } from './_db.js';
 
 const MODEL = 'claude-haiku-5-5';
 
@@ -41,6 +42,8 @@ export default async function handler(req, res) {
     res.setHeader('Allow', 'POST');
     return res.status(405).json({ error: 'method not allowed' });
   }
+
+  if (!checkAppToken(req)) return res.status(401).json({ error: 'unauthorized' });
 
   if (!process.env.ANTHROPIC_API_KEY) {
     return res.status(500).json({ error: 'ANTHROPIC_API_KEY not configured' });
